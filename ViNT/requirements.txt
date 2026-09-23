@@ -1,0 +1,13 @@
+# CPU 전용 PyTorch를 받기 위한 인덱스
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.10.*
+torchvision==0.25.*
+efficientnet_pytorch==0.7.*   # ViNT의 영상 인코더
+onnx==1.20.*
+onnxscript==0.7.2             # 검증된 dynamo exporter 버전
+onnxruntime==1.23.*           # C++는 onnxruntime_vendor 1.24를 쓴다. Python은 pip에 올라온 최신이 1.23이다
+numpy==2.2.*
+pillow==11.*
+gdown==5.*
+pyyaml==6.*
+warmup_scheduler==0.3         # 체크포인트가 학습 상태까지 담고 있어 unpickle에 필요하다

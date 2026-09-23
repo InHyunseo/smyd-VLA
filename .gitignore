@@ -10,3 +10,7 @@ log/
 
 # 실행 결과
 results/
+
+# ViNT 내려받기·변환 산출물
+ViNT/cache/
+ViNT/model/
