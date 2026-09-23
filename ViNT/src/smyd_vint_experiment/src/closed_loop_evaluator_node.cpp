@@ -1,3 +1,11 @@
+// closed_loop_evaluator_node
+// 주행 중 odom을 기록하고, 기록 경로의 마지막 위치까지의 거리로 성공 여부를 판정한다.
+// 성공하거나 제한 시간이 지나면 result.yaml을 쓰고 launch를 끝낸다.
+//
+// 입력: topomap_directory, output_directory 파라미터, odom (Odometry), scan (LaserScan),
+//       topoplan/reached_goal (Bool)
+// 출력: output_directory/result.yaml, output_directory/trajectory.csv
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -17,6 +25,7 @@
 
 namespace fs = std::filesystem;
 
+// 기록 경로의 길이와 마지막 위치.
 struct Route
 {
   double length = 0.0;
@@ -24,6 +33,7 @@ struct Route
   double goal_y = 0.0;
 };
 
+// topomap의 poses.csv를 읽어 경로 길이와 목표 위치를 구한다.
 Route read_route(const fs::path & csv)
 {
   std::ifstream input(csv);
@@ -31,6 +41,8 @@ Route read_route(const fs::path & csv)
   std::string line;
   std::getline(input, line);
   Route route;
+  double previous_x = 0.0;
+  double previous_y = 0.0;
   int count = 0;
   while (std::getline(input, line)) {
     if (line.empty()) {continue;}
@@ -43,26 +55,27 @@ Route read_route(const fs::path & csv)
     {
       throw std::runtime_error("invalid poses.csv row: " + line);
     }
-    if (count > 0) {route.length += std::hypot(x - route.goal_x, y - route.goal_y);}
-    route.goal_x = x;
-    route.goal_y = y;
+    if (count > 0) {route.length += std::hypot(x - previous_x, y - previous_y);}
+    previous_x = x;
+    previous_y = y;
     ++count;
   }
   if (count == 0) {throw std::runtime_error("poses.csv has no poses");}
+  route.goal_x = previous_x;
+  route.goal_y = previous_y;
   return route;
 }
 
+// 주행을 평가하고 결과 파일을 남기는 노드.
 class ClosedLoopEvaluatorNode : public rclcpp::Node
 {
 public:
+  // 기록 경로를 읽고 결과 폴더와 topic을 준비한다.
   ClosedLoopEvaluatorNode()
   : Node("closed_loop_evaluator_node")
   {
-    const fs::path topomap = declare_parameter<std::string>("topomap_directory", "");
-    output_directory_ = declare_parameter<std::string>("output_directory", "");
-    if (topomap.empty() || output_directory_.empty()) {
-      throw std::runtime_error("topomap_directory and output_directory are required");
-    }
+    const fs::path topomap = declare_parameter<std::string>("topomap_directory");
+    output_directory_ = declare_parameter<std::string>("output_directory");
     route_ = read_route(topomap / "poses.csv");
     fs::create_directories(output_directory_);
     trajectory_file_.open(output_directory_ / "trajectory.csv");
@@ -78,15 +91,18 @@ public:
     goal_subscription_ = create_subscription<std_msgs::msg::Bool>(
       "topoplan/reached_goal", 10,
       [this](const std_msgs::msg::Bool::SharedPtr message) {
-        if (message->data && !model_claimed_goal_ && have_position_) {
-          model_claimed_goal_ = true;
-          model_claimed_goal_distance_m_ = distance_to_goal(last_x_, last_y_);
-        }
+        // 모델이 도착을 선언하면 추종 노드가 멈추므로 거기서 주행이 끝난다.
+        if (!message->data || model_claimed_goal_ || !have_position_) {return;}
+        model_claimed_goal_ = true;
+        model_claimed_goal_distance_m_ = distance_to_goal(last_x_, last_y_);
+        finish(final_distance_m_ <= success_radius_m_ ? "success" : "model_stopped");
+        rclcpp::shutdown();
       });
   }
 
   bool finished() const {return finished_;}
 
+  // 결과를 result.yaml에 한 번만 쓴다.
   void finish(const std::string & reason)
   {
     if (finished_) {return;}
@@ -126,11 +142,13 @@ private:
   static constexpr double time_limit_seconds_ = 300.0;
   static constexpr double collision_distance_m_ = 0.2;
 
+  // 목표까지의 평면 거리.
   double distance_to_goal(double x, double y) const
   {
     return std::hypot(x - route_.goal_x, y - route_.goal_y);
   }
 
+  // 궤적을 적고 성공·시간 초과를 판정한다.
   void on_odometry(const nav_msgs::msg::Odometry::SharedPtr message)
   {
     if (finished_) {return;}
@@ -149,6 +167,7 @@ private:
     final_distance_m_ = distance_to_goal(x, y);
     trajectory_file_ << elapsed_seconds_ << "," << x << "," << y << ","
                      << final_distance_m_ << "\n";
+    trajectory_file_.flush();
     if (final_distance_m_ <= success_radius_m_) {
       finish("success");
       rclcpp::shutdown();
@@ -158,6 +177,7 @@ private:
     }
   }
 
+  // 가장 가까운 장애물이 임계 안으로 들어온 횟수를 센다.
   void on_scan(const sensor_msgs::msg::LaserScan::SharedPtr message)
   {
     ++scan_samples_;

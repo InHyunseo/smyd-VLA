@@ -1,3 +1,10 @@
+// waypoint_follower_node
+// ViNT가 낸 경유점을 상류 deployment/src/pd_controller.py와 같은 식으로 속도 명령으로 바꾼다.
+// 경유점이 끊기거나 목표에 도착하면 정지 명령을 낸다.
+//
+// 입력: navigate.yaml 파라미터, waypoint (PoseStamped), topoplan/reached_goal (Bool)
+// 출력: cmd_vel (Twist)
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -12,17 +19,19 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/bool.hpp>
 
+// 경유점을 cmd_vel로 바꾸는 노드.
 class WaypointFollowerNode : public rclcpp::Node
 {
 public:
+  // 파라미터를 읽고 제어 주기 타이머를 건다.
   WaypointFollowerNode()
   : Node("waypoint_follower_node")
   {
-    max_v_ = declare_parameter<double>("max_v", 0.2);
-    max_w_ = declare_parameter<double>("max_w", 0.4);
-    model_frame_rate_ = declare_parameter<double>("model_frame_rate", 4.0);
-    timeout_seconds_ = declare_parameter<double>("waypoint_timeout_seconds", 2.0);
-    const double control_rate = declare_parameter<double>("control_rate_hz", 10.0);
+    max_v_ = declare_parameter<double>("max_v");
+    max_w_ = declare_parameter<double>("max_w");
+    model_frame_rate_ = declare_parameter<double>("model_frame_rate");
+    timeout_seconds_ = declare_parameter<double>("waypoint_timeout_seconds");
+    const double control_rate = declare_parameter<double>("control_rate_hz");
     if (max_v_ <= 0 || max_w_ <= 0 || model_frame_rate_ <= 0 ||
       timeout_seconds_ <= 0 || control_rate <= 0)
     {
@@ -51,9 +60,11 @@ public:
     timer_ = create_wall_timer(period, [this]() {publish_command();});
   }
 
+  // 정지 명령을 한 번 낸다.
   void stop() {command_publisher_->publish(geometry_msgs::msg::Twist());}
 
 private:
+  // 마지막 경유점으로 속도를 계산해 발행한다.
   void publish_command()
   {
     geometry_msgs::msg::Twist command;
@@ -71,10 +82,7 @@ private:
     double angular = 0.0;
     if (std::abs(dx) < epsilon && std::abs(dy) < epsilon) {
       const auto & orientation = waypoint_.pose.orientation;
-      const double yaw = std::atan2(
-        2.0 * (orientation.w * orientation.z + orientation.x * orientation.y),
-        1.0 - 2.0 * (orientation.y * orientation.y + orientation.z * orientation.z));
-      angular = yaw * model_frame_rate_;
+      angular = 2.0 * std::atan2(orientation.z, orientation.w) * model_frame_rate_;
     } else if (std::abs(dx) < epsilon) {
       angular = std::copysign(M_PI / 2.0, dy) * model_frame_rate_;
     } else {
@@ -92,10 +100,10 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
   geometry_msgs::msg::PoseStamped waypoint_;
   std::chrono::steady_clock::time_point last_waypoint_time_;
-  double max_v_ = 0.2;
-  double max_w_ = 0.4;
-  double model_frame_rate_ = 4.0;
-  double timeout_seconds_ = 2.0;
+  double max_v_;
+  double max_w_;
+  double model_frame_rate_;
+  double timeout_seconds_;
   bool have_waypoint_ = false;
   bool reached_goal_ = false;
 };
@@ -110,6 +118,7 @@ void request_stop(int)
 }
 }  // namespace
 
+// rclcpp의 신호 처리를 끄고 직접 받는다. 종료 뒤에도 정지 명령을 한 번 더 내야 하기 때문이다.
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv, rclcpp::InitOptions(), rclcpp::SignalHandlerOptions::None);
@@ -120,8 +129,7 @@ int main(int argc, char ** argv)
     rclcpp::executors::SingleThreadedExecutor executor;
     executor.add_node(node);
     while (!stop_requested && rclcpp::ok()) {
-      executor.spin_some();
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      executor.spin_once(std::chrono::milliseconds(10));
     }
     node->stop();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));

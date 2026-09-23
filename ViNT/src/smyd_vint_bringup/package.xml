@@ -6,6 +6,7 @@
   <description>Gazebo 시뮬레이터와 ViNT 노드를 함께 띄우는 launch와 설정</description>
   <maintainer email="inhsroy@hanyang.ac.kr">InHyunseo</maintainer>
   <license>MIT</license>
+  <license file="models/smyd_vint_waffle_pi/LICENSE-APACHE-2.0">Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

@@ -17,12 +17,11 @@ target_link_libraries(vint_model PUBLIC onnxruntime::onnxruntime ${OpenCV_LIBS})
 add_executable(vint_navigator_node src/vint_navigator_node.cpp)
 ament_target_dependencies(vint_navigator_node
   rclcpp sensor_msgs geometry_msgs std_msgs cv_bridge)
-target_link_libraries(vint_navigator_node vint_model ${OpenCV_LIBS})
+target_link_libraries(vint_navigator_node vint_model)
 
 add_executable(waypoint_follower_node src/waypoint_follower_node.cpp)
 ament_target_dependencies(waypoint_follower_node rclcpp geometry_msgs std_msgs)
 
-install(TARGETS vint_model DESTINATION lib)
 install(TARGETS vint_navigator_node waypoint_follower_node
   DESTINATION lib/${PROJECT_NAME})
 

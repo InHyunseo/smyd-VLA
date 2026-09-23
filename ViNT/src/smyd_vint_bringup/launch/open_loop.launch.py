@@ -1,4 +1,8 @@
-"""Replay a recorded route and compare ViNT waypoints with subsequent odometry."""
+# open_loop.launch.py
+# 기록한 bag을 재생하면서 ViNT의 경유점 예측을 그 뒤 기록된 이동과 비교한다. 로봇은 움직이지 않는다.
+#
+# 입력: topomap 인자, model/vint.onnx
+# 출력: results/open_loop/<시각>_<topomap 이름>/ (waypoint_errors.csv, logs/)
 
 from datetime import datetime
 from pathlib import Path
@@ -11,6 +15,7 @@ from launch_ros.actions import Node
 
 
 def launch_setup(context):
+    """입력을 확인하고 추론 노드, 비교 노드, bag 재생을 구성한다."""
     topomap = Path(LaunchConfiguration("topomap").perform(context)).expanduser().resolve()
     bag = topomap / "bag"
     model = Path("model/vint.onnx").resolve()
@@ -33,7 +38,7 @@ def launch_setup(context):
             on_exit=Shutdown()),
         Node(
             package="smyd_vint_experiment", executable="open_loop_evaluator_node", output="screen",
-            parameters=[{"use_sim_time": True, "output_directory": str(run)}],
+            parameters=[str(config), {"use_sim_time": True, "output_directory": str(run)}],
             on_exit=Shutdown()),
         TimerAction(period=3.0, actions=[ExecuteProcess(
             cmd=["ros2", "bag", "play", "--clock", "100", str(bag)],
@@ -43,6 +48,6 @@ def launch_setup(context):
 
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument("topomap", description="record_topomap output directory"),
+        DeclareLaunchArgument("topomap", description="record_topomap 결과 폴더"),
         OpaqueFunction(function=launch_setup),
     ])

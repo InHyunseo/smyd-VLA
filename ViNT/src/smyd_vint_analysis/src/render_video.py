@@ -1,7 +1,11 @@
 #!/usr/bin/python3 -s
-"""Render an H.264 MP4; closed-loop runs also get a waypoint inset with a legend.
+"""실행 폴더의 bag에서 카메라 영상을 H.264 MP4로 만든다.
 
-The inset uses the robot's x-forward/y-left frame, not a projection onto camera pixels.
+폐루프는 오른쪽에 패널을 붙인 video_overlay.mp4도 만든다. 패널의 좌표는 카메라 화면에
+투영한 것이 아니라 로봇 기준(x 앞, y 왼쪽)이다.
+
+입력: 폐루프는 <실행 폴더>/bag, 개루프는 source_bag.txt가 가리키는 bag
+출력: <실행 폴더>/video.mp4, 폐루프는 video_overlay.mp4도
 """
 
 import argparse
@@ -21,6 +25,7 @@ NODE_TOPIC = "/vint/closest_node"
 
 
 def read_errors(run):
+    """개루프 오차를 (시각, 오차) 목록으로 읽는다. 폐루프면 빈 목록이다."""
     path = run / "waypoint_errors.csv"
     if not path.exists():
         return []
@@ -29,10 +34,11 @@ def read_errors(run):
 
 
 def start_encoder(output, width=640):
+    """임시 파일로 인코딩하는 ffmpeg 프로세스를 띄운다."""
     temporary = output.with_name(f"{output.stem}.tmp.mp4")
     process = subprocess.Popen(
         ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "bgr24",
-         "-video_size", f"{width}x480", "-framerate", "5", "-i", "pipe:0", "-an",
+         "-video_size", f"{width}x480", "-framerate", "4", "-i", "pipe:0", "-an",
          "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(temporary)],
         stdin=subprocess.PIPE,
     )
@@ -40,7 +46,7 @@ def start_encoder(output, width=640):
 
 
 def draw_closed_overlay(frame, elapsed, waypoint, node):
-    """Place inference beside the camera in a fixed-scale robot-frame diagram."""
+    """카메라 프레임 오른쪽에 노드 번호와 경유점을 그린 패널을 붙인다."""
     image = cv2.copyMakeBorder(frame, 0, 0, 0, 320, cv2.BORDER_CONSTANT, value=(28, 32, 40))
     white, muted, cyan = (245, 245, 245), (168, 174, 182), (235, 190, 52)
     cv2.putText(image, "ViNT", (664, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.85, white, 2, cv2.LINE_AA)
@@ -79,6 +85,7 @@ def draw_closed_overlay(frame, elapsed, waypoint, node):
 
 
 def main():
+    """bag을 한 번 훑으면서 영상을 인코딩한다."""
     parser = argparse.ArgumentParser()
     parser.add_argument("run", type=Path)
     args = parser.parse_args()

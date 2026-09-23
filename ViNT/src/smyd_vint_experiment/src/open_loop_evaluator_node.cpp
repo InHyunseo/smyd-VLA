@@ -1,3 +1,10 @@
+// open_loop_evaluator_node
+// 기록된 주행을 재생하는 동안 ViNT가 낸 경유점을, 그 뒤 실제로 기록된 odom 이동과 비교한다.
+// 로봇은 움직이지 않으므로 예측이 주행에 영향을 주지 않는다.
+//
+// 입력: output_directory와 navigate.yaml 파라미터, waypoint (PoseStamped), odom (Odometry)
+// 출력: output_directory/waypoint_errors.csv
+
 #include <cmath>
 #include <cstdio>
 #include <deque>
@@ -13,6 +20,7 @@
 
 namespace fs = std::filesystem;
 
+// 아직 비교 시점이 되지 않은 예측 하나와 그때의 로봇 자세.
 struct PendingWaypoint
 {
   double stamp;
@@ -23,14 +31,23 @@ struct PendingWaypoint
   double predicted_y;
 };
 
+// 쿼터니언에서 yaw만 꺼낸다.
+double yaw_of(const geometry_msgs::msg::Quaternion & q)
+{
+  return std::atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z));
+}
+
+// 경유점 예측과 이후 이동을 비교해 CSV로 남기는 노드.
 class OpenLoopEvaluatorNode : public rclcpp::Node
 {
 public:
+  // 비교 지평을 파라미터에서 구하고 CSV를 연다.
   OpenLoopEvaluatorNode()
   : Node("open_loop_evaluator_node")
   {
-    const fs::path output_directory = declare_parameter<std::string>("output_directory", "");
-    if (output_directory.empty()) {throw std::runtime_error("output_directory is required");}
+    const fs::path output_directory = declare_parameter<std::string>("output_directory");
+    horizon_seconds_ = (declare_parameter<int>("waypoint_index") + 1) /
+      declare_parameter<double>("model_frame_rate");
     fs::create_directories(output_directory);
     output_.open(output_directory / "waypoint_errors.csv");
     if (!output_) {throw std::runtime_error("cannot open waypoint_errors.csv");}
@@ -41,9 +58,14 @@ public:
       [this](const nav_msgs::msg::Odometry::SharedPtr message) {on_odometry(message);});
     waypoint_subscription_ = create_subscription<geometry_msgs::msg::PoseStamped>(
       "waypoint", 10,
-      [this](const geometry_msgs::msg::PoseStamped::SharedPtr message) {on_waypoint(message);});
+      [this](const geometry_msgs::msg::PoseStamped::SharedPtr message) {
+        if (!have_odometry_) {return;}
+        pending_.push_back({rclcpp::Time(message->header.stamp).seconds(), last_x_, last_y_,
+          last_yaw_, message->pose.position.x, message->pose.position.y});
+      });
   }
 
+  // 비교한 예측 수를 남긴다.
   void finish()
   {
     output_.close();
@@ -51,45 +73,31 @@ public:
   }
 
 private:
-  // The configured waypoint index is 2 and ViNT predicts at 4 Hz.
-  static constexpr double horizon_seconds_ = 0.75;
-
-  void on_waypoint(const geometry_msgs::msg::PoseStamped::SharedPtr message)
-  {
-    if (!have_odometry_) {return;}
-    const double stamp = rclcpp::Time(message->header.stamp).seconds();
-    if (stamp <= last_odometry_stamp_ - 0.2) {return;}
-    pending_.push_back({stamp, last_x_, last_y_, last_yaw_,
-      message->pose.position.x, message->pose.position.y});
-  }
-
+  // 현재 자세를 갱신하고, 지평이 지난 예측을 실제 이동과 비교해 한 줄씩 적는다.
   void on_odometry(const nav_msgs::msg::Odometry::SharedPtr message)
   {
     const double stamp = rclcpp::Time(message->header.stamp).seconds();
     const double x = message->pose.pose.position.x;
     const double y = message->pose.pose.position.y;
-    const auto & q = message->pose.pose.orientation;
-    const double yaw = std::atan2(
-      2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z));
     if (have_odometry_ && stamp < last_odometry_stamp_) {pending_.clear();}
     last_odometry_stamp_ = stamp;
     last_x_ = x;
     last_y_ = y;
-    last_yaw_ = yaw;
+    last_yaw_ = yaw_of(message->pose.pose.orientation);
     have_odometry_ = true;
 
     while (!pending_.empty() && stamp >= pending_.front().stamp + horizon_seconds_) {
-      const auto prediction = pending_.front();
+      const PendingWaypoint prediction = pending_.front();
       pending_.pop_front();
       const double dx = x - prediction.x;
       const double dy = y - prediction.y;
       const double recorded_x = std::cos(prediction.yaw) * dx + std::sin(prediction.yaw) * dy;
       const double recorded_y = -std::sin(prediction.yaw) * dx + std::cos(prediction.yaw) * dy;
-      const double error = std::hypot(
-        prediction.predicted_x - recorded_x, prediction.predicted_y - recorded_y);
       output_ << prediction.stamp << "," << prediction.predicted_x << ","
               << prediction.predicted_y << "," << recorded_x << "," << recorded_y << ","
-              << error << "\n";
+              << std::hypot(prediction.predicted_x - recorded_x, prediction.predicted_y - recorded_y)
+              << "\n";
+      output_.flush();
       ++samples_;
     }
   }
@@ -98,6 +106,7 @@ private:
   std::deque<PendingWaypoint> pending_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odometry_subscription_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr waypoint_subscription_;
+  double horizon_seconds_;
   double last_odometry_stamp_ = 0.0;
   double last_x_ = 0.0;
   double last_y_ = 0.0;

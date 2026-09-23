@@ -5,6 +5,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(tf2 REQUIRED)
@@ -20,11 +21,10 @@ add_executable(closed_loop_evaluator_node src/closed_loop_evaluator_node.cpp)
 ament_target_dependencies(closed_loop_evaluator_node
   rclcpp nav_msgs sensor_msgs std_msgs)
 
-install(TARGETS topomap_recorder_node closed_loop_evaluator_node
-  DESTINATION lib/${PROJECT_NAME})
-
 add_executable(open_loop_evaluator_node src/open_loop_evaluator_node.cpp)
 ament_target_dependencies(open_loop_evaluator_node rclcpp geometry_msgs nav_msgs)
-install(TARGETS open_loop_evaluator_node DESTINATION lib/${PROJECT_NAME})
+
+install(TARGETS topomap_recorder_node closed_loop_evaluator_node open_loop_evaluator_node
+  DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

@@ -1,20 +1,22 @@
+# 상류 deployment/config/robot.yaml, navigate.py, pd_controller.py와 같은 값이다.
+# radius만 CPU 추론 비용 때문에 4에서 2로 낮췄다.
+
+/**:
+  ros__parameters:
+    max_v: 0.2                    # m/s
+    model_frame_rate: 4.0         # Hz, 경유점 사이 간격
+    waypoint_index: 2             # 예측 5개 중 따라갈 번호
+
 vint_navigator_node:
   ros__parameters:
     radius: 2
-    close_threshold: 3.0
-    waypoint_index: 2
-    goal_node: -1
-    context_frames_per_second: 4.0
+    close_threshold: 3.0          # 시간 거리가 이 아래면 다음 노드로 넘어간다
     inference_rate_hz: 2.0
     image_timeout_seconds: 2.0
     inference_threads: 2
-    max_v: 0.2
-    model_frame_rate: 4.0
 
 waypoint_follower_node:
   ros__parameters:
-    max_v: 0.2
-    max_w: 0.4
-    model_frame_rate: 4.0
+    max_w: 0.4                    # rad/s
     control_rate_hz: 10.0
-    waypoint_timeout_seconds: 2.0
+    waypoint_timeout_seconds: 1.0

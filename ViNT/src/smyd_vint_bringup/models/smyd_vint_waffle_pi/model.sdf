@@ -388,7 +388,7 @@
       <sensor name="camera" type="camera">
         <always_on>true</always_on>
         <visualize>true</visualize>
-        <update_rate>5</update_rate>
+        <update_rate>4</update_rate>
         <camera name="picam">
           <horizontal_fov>1.085595</horizontal_fov>
           <image>

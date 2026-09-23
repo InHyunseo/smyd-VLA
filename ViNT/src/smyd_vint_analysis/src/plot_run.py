@@ -1,5 +1,9 @@
 #!/usr/bin/python3 -s
-"""Save one comparison figure from an open- or closed-loop ViNT run."""
+"""실행 폴더 하나에서 figure1.png를 만든다.
+
+입력: 개루프는 waypoint_errors.csv, 폐루프는 trajectory.csv와 source_topomap.txt
+출력: <실행 폴더>/figure1.png
+"""
 
 import argparse
 import csv
@@ -12,20 +16,18 @@ import matplotlib.pyplot as plt
 
 
 def rows(path):
+    """CSV를 dict 목록으로 읽는다."""
     with path.open(newline="") as stream:
         return list(csv.DictReader(stream))
 
 
 def values(data, key):
+    """열 하나를 float 목록으로 꺼낸다."""
     return [float(row[key]) for row in data]
 
 
 def plot_open_loop(run):
-    """Figure 1. ViNT의 0.75초 뒤 경유점과 기록된 이동 사이의 2D 위치 오차.
-
-    CSV의 각 행은 비교 가능한 예측 하나이며, 시간 0은 첫 예측 시각이다.
-    같은 시연을 topomap에도 사용하므로 독립 테스트 결과가 아니다.
-    """
+    """예측 경유점과 실제 이동 사이의 거리 오차를 재생 시간축에 그린다."""
     data = rows(run / "waypoint_errors.csv")
     if not data:
         raise RuntimeError("waypoint_errors.csv has no comparable predictions")
@@ -42,12 +44,7 @@ def plot_open_loop(run):
 
 
 def plot_closed_loop(run):
-    """Figure 1. 기록 경로와 폐루프 주행 궤적, 그리고 목표까지 남은 거리.
-
-    왼쪽 검은 점선은 topomap 기록 시의 odom 경로, 파란 선은 ViNT가 주행한 odom 경로다.
-    별은 기록 경로의 마지막 위치다. 오른쪽은 첫 odom 이후의 목표 거리이며 빨간 점선은
-    위치 기준 성공 반경 0.5 m다. 이 그림만으로 영상 기반 노드 인식의 정확도는 판단하지 않는다.
-    """
+    """왼쪽에 기록 경로와 주행 궤적을, 오른쪽에 목표까지 거리와 성공 반경을 그린다."""
     trajectory = rows(run / "trajectory.csv")
     if not trajectory:
         raise RuntimeError("trajectory.csv has no odometry")
@@ -59,8 +56,7 @@ def plot_closed_loop(run):
     axes[0].scatter([float(recorded[-1]["x"])], [float(recorded[-1]["y"])],
                     color="#c24132", marker="*", s=100, label="Goal")
     axes[0].set(xlabel="x [m]", ylabel="y [m]", title="Route")
-    y_values = values(recorded, "y") + values(trajectory, "y")
-    axes[0].set_ylim(min(y_values) - 0.08, max(y_values) + 0.08)
+    axes[0].set_aspect("equal")
     axes[0].legend(frameon=False, fontsize=8)
     axes[1].plot(values(trajectory, "seconds"), values(trajectory, "distance_to_goal_m"),
                  color="#2563a6")
@@ -74,6 +70,7 @@ def plot_closed_loop(run):
 
 
 def main():
+    """실행 폴더 종류를 보고 맞는 그림을 저장한다."""
     parser = argparse.ArgumentParser()
     parser.add_argument("run", type=Path)
     args = parser.parse_args()
