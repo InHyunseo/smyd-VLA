@@ -1,0 +1,53 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 0.1
+      Plane Cell Count: 10
+      Reference Frame: <Fixed Frame>
+    - Class: rviz_default_plugins/Marker
+      Name: Ground Truth Path
+      Enabled: true
+      Topic:
+        Value: /ground_truth/path
+    - Class: rviz_default_plugins/Marker
+      Name: Prediction Path
+      Enabled: true
+      Topic:
+        Value: /prediction/path
+    - Class: rviz_default_plugins/Image
+      Name: Agent View
+      Enabled: true
+      Topic:
+        Value: /ground_truth/image
+    - Class: rviz_default_plugins/Image
+      Name: Wrist Camera
+      Enabled: true
+      Topic:
+        Value: /ground_truth/image2
+  Global Options:
+    Fixed Frame: world
+    Background Color: 48; 48; 48
+    Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 0.9
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Pitch: 0.45
+      Yaw: 2.9
+      Target Frame: end_effector
+Window Geometry:
+  Width: 1400
+  Height: 800

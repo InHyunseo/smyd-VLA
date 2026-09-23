@@ -1,0 +1,10 @@
+# CPU 전용 PyTorch를 받기 위한 인덱스
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.10.*
+torchvision==0.25.*   # 코드에서 직접 쓰지 않지만 torch와 같은 CPU 빌드로 맞춘다
+lerobot[smolvla,libero]==0.4.4
+numpy==2.2.*
+opencv-python-headless==4.12.*
+av==15.1.*
+robosuite==1.4.*
+matplotlib==3.10.*

@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>smyd_vla_analysis</name>
+  <version>0.1.0</version>
+  <description>open-loop 그림·RViz2 녹화 영상, closed-loop 오버레이 영상 생성 (matplotlib은 프로젝트 .venv에서 설치)</description>
+  <maintainer email="inhsroy@hanyang.ac.kr">InHyunseo</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>smyd_vla_msgs</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rosbag2_py</exec_depend>
+  <exec_depend>rosidl_runtime_py</exec_depend>
+  <exec_depend>ros2bag</exec_depend>
+  <exec_depend>ros2run</exec_depend>
+  <exec_depend>rosbag2_storage_default_plugins</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>xvfb</exec_depend>
+  <exec_depend>ffmpeg</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

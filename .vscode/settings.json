@@ -1,0 +1,14 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/smolVLA/.venv/bin/python",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/smolVLA/install/smyd_vla_msgs/lib/python3.10/site-packages",
+    "${workspaceFolder}/smolVLA/install/smyd_vla_inference/lib/smyd_vla_inference",
+    "/opt/ros/humble/lib/python3.10/site-packages",
+    "/opt/ros/humble/local/lib/python3.10/dist-packages"
+  ],
+  "files.exclude": {
+    "**/build": true,
+    "**/install": true,
+    "**/log": true
+  }
+}

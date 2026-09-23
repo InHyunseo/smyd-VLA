@@ -3,11 +3,10 @@
 __pycache__/
 *.pyc
 
-# ROS2 colcon
-ros2_ws/build/
-ros2_ws/install/
-ros2_ws/log/
+# colcon
+build/
+install/
+log/
 
-# Outputs
-outputs/
-*.mp4
+# 실행 결과
+results/

@@ -1,0 +1,12 @@
+# open-loop 실행 파라미터. /** 항목은 같은 이름을 선언한 모든 노드가 함께 쓴다.
+/**:
+  ros__parameters:
+    frames_per_second: 10.0      # LIBERO 데이터셋 주기
+
+episode_replay_node:
+  ros__parameters:
+    steps_per_inference: 1       # 예측 50스텝 중 재생할 스텝 수
+
+smolvla_node:
+  ros__parameters:
+    model_id: HuggingFaceVLA/smolvla_libero
