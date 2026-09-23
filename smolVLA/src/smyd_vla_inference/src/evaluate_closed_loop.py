@@ -21,6 +21,8 @@ from pathlib import Path
 import numpy as np
 
 os.environ.setdefault("MUJOCO_GL", "egl")  # 화면 없이 렌더링한다.
+# setup.sh와 같은 가상환경별 설정을 쓴다. 명시적으로 지정한 경로는 유지한다.
+os.environ.setdefault("LIBERO_CONFIG_PATH", str(Path(sys.prefix) / "libero_config"))
 
 
 def main():

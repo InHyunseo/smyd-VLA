@@ -27,7 +27,7 @@ sudo apt install -y python3-venv
 ./scripts/setup.sh            # 가상환경 생성 + Python 의존성 설치 (--model 을 붙이면 모델도 미리 받음)
 ```
 
-스크립트가 하는 일은 [setup.sh](scripts/setup.sh) 맨 위에 적혀 있습니다. 모델과 데이터셋은 실행할 때 필요한 만큼 Hugging Face 캐시(`~/.cache/huggingface`)로 받아집니다.
+스크립트가 하는 일은 [setup.sh](scripts/setup.sh) 맨 위에 적혀 있습니다. 설치 스크립트와 이 프로젝트의 closed-loop 평가는 LIBERO 설정을 기본적으로 `.venv/libero_config/`에 저장하므로 다른 가상환경의 `~/.libero` 설정에 영향받지 않습니다. 별도 설정이 필요하면 `LIBERO_CONFIG_PATH`를 지정할 수 있습니다. 모델과 데이터셋은 실행할 때 필요한 만큼 Hugging Face 캐시(`~/.cache/huggingface`)로 받아집니다.
 
 ## 3. ROS 의존성과 빌드
 

@@ -18,8 +18,10 @@ pip install --quiet --upgrade pip
 PATH=/usr/bin:$PATH pip install --quiet --no-build-isolation egl_probe hf-egl-probe
 pip install --quiet --requirement requirements.txt
 
-# LIBERO는 처음 import할 때 데이터 경로를 묻는다. 기본값으로 답해 설정 파일을 만들어 둔다.
-echo N | python -c "import libero.libero" > /dev/null 2>&1 || true
+# LIBERO의 기본 설정은 이 가상환경에 둔다. 기존 ~/.libero 설정의 오래된 절대 경로를 재사용하지 않는다.
+# 사용자가 LIBERO_CONFIG_PATH를 지정했다면 그 설정을 유지한다.
+export LIBERO_CONFIG_PATH="${LIBERO_CONFIG_PATH:-$VIRTUAL_ENV/libero_config}"
+printf 'N\n' | python -c "import libero.libero" > /dev/null
 
 if [[ "${1:-}" == "--model" ]]; then
   python - <<'PYTHON'
