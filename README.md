@@ -12,3 +12,5 @@
 ## License
 
 MIT
+
+The MIT license applies to original code in this repository; third-party libraries, models, datasets, and downloaded ViNT code remain under their respective licenses.
